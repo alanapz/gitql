@@ -1,0 +1,62 @@
+enum TreeItemType {
+    BLOB
+    SUBTREE
+}
+
+type Query {
+    repository(path: String!): Repository
+}
+
+type Repository {
+    path: String!
+
+    blobs: [Blob!]!
+    blob(id: String!): Blob
+
+    trees: [Tree!]!
+    tree(id: String!): Tree
+
+    commits: [Commit!]!
+    commit(id: String!): Commit
+}
+
+type Blob {
+    id: String!
+    repository: Repository!
+    size: Int!
+    value: String!
+}
+
+type Tree {
+    id: String!
+    repository: Repository!
+    items: [TreeItem!]!
+    "Returns the corresponding tree item for the name, recursively if necessary (eg: folder/subfolder/subsubfolder/file)"
+    item(name: String!): TreeItem
+}
+
+type TreeItem {
+    tree: Tree!
+    type: TreeItemType!
+    id: String!
+    name: String!
+    "The filesystem mode bits for this item"
+    mode: String!
+    "Returns the corresponding Blob for this tree item (Only valid for TreeItemType.BLOB)"
+    blob: Blob
+    "Returns the corresponding Subtree for this tree item (Only valid for TreeItemType.SUBTREE)"
+    subtree: Tree
+}
+
+type Commit {
+    id: String!
+    repository: Repository!
+    parents: [Commit!]!
+    author: String!
+    committer: String!
+    tree: Tree!
+}
+
+schema {
+    query: Query
+}
