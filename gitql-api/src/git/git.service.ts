@@ -9,13 +9,13 @@ export class GitService {
 
     public listObjects(repoPath: string): Promise<GitObject[]> {
         check.nonNullNotEmpty(repoPath, "repoPath");
-        return this.gitExecute(['-C', repoPath, 'cat-file', '--batch-all-objects', '--batch-check']).then(value => GitUtils.parseListObjects(value));
+        return this.gitExecute(['-C', repoPath, 'cat-file', '--batch-all-objects', '--batch-check']).then(result => GitUtils.parseListObjects(result));
     }
 
     public getObjectSize(repoPath: string, objectId: string): Promise<number> {
         check.nonNullNotEmpty(repoPath, "repoPath");
         check.nonNullNotEmpty(objectId, "objectId");
-        return this.gitExecute(['-C', repoPath, 'cat-file', '-s', objectId]).then(value => parseInt(value, 10));
+        return this.gitExecute(['-C', repoPath, 'cat-file', '-s', objectId]).then(result => parseInt(result, 10));
     }
 
     public getObjectValue(repoPath: string, objectId: string): Promise<string> {
@@ -27,13 +27,13 @@ export class GitService {
     public listTreeItems(repoPath: string, treeId: string): Promise<GitTreeItem[]> {
         check.nonNullNotEmpty(repoPath, "repoPath");
         check.nonNullNotEmpty(treeId, "treeId");
-        return this.gitExecute(['-C', repoPath, 'cat-file', '-p', treeId]).then(value => GitUtils.parseTreeItems(value));
+        return this.gitExecute(['-C', repoPath, 'cat-file', '-p', treeId]).then(result => GitUtils.parseTreeItems(result));
     }
 
     public getCommitDetails(repoPath: string, commitId: string): Promise<GitCommit> {
         check.nonNullNotEmpty(repoPath, "repoPath");
         check.nonNullNotEmpty(commitId, "commitId");
-        return this.gitExecute(['-C', repoPath, 'cat-file', '-p', commitId]).then(value => GitUtils.parseCommitDetails(value));
+        return this.gitExecute(['-C', repoPath, 'cat-file', '-p', commitId]).then(result => GitUtils.parseCommitDetails(commitId, result));
     }
 
     private gitExecute(args: string[]): Promise<string> {

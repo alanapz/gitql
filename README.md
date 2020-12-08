@@ -26,12 +26,7 @@ Query resolver: https://github.com/alanapz/gitql/blob/develop/gitql-api/src/quer
 ## How To Run
 
 ```
-docker run -it -p3000:3000 node:latest sh
-git clone https://github.com/alanapz/gitql.git
-cd gitql/gitql-api/
-npm install
-npm install -g ts-node && ts-node src/generate-typings
-npm run start:debug
+docker run -it -p3000:3000 node:latest sh -c "git clone https://github.com/alanapz/gitql.git /gitql && /gitql/ci/start.sh"
 ```
 
 The GraphQL playground should be available at: http://localhost:3000/graphql
@@ -74,6 +69,16 @@ query {
     tree(id: "a6e6de841a27ce1f957b54cf07f21ebd61e8cd32") {
       item(name: "gitql-api/schema/schema.graphqls") { blob { value }} 
     }
+  }
+}
+```
+
+- Show all commits and their ancestors (all previous commits reachable from a commit)
+
+```
+query {
+  repository(path: "..") {
+    commits { message, ancestors { id, message } }
   }
 }
 ```

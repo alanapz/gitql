@@ -25,6 +25,7 @@ export interface GitTreeItem {
 
 export interface GitCommit {
     id: string;
+    parentIds: string[];
     treeId: string;
     author: string;
     committer: string;

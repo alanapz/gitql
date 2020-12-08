@@ -2,16 +2,9 @@ import { GitCommit, GitObject, GitObjectType, GitTreeItem, GitTreeItemType } fro
 
 export class GitUtils {
 
-    private static readonly listObjectsPattern = /^([a-f0-9]{40})\s+(blob|tree|commit|tag)\s+(\d+)$/gm;
-
     private static readonly validObjectTypes: GitObjectType[] = [ GitObjectType.Blob, GitObjectType.Tree, GitObjectType.Commit, GitObjectType.Tag ];
 
-    // 040000 tree 98d9d633a09b12ab2beeeb71fc193390ad0666e9    .idea
-    private static readonly listTreeItemsPattern = /^(\d+)\s+(blob|tree)\s+([a-f0-9]{40})\s+(.*)$/gm;
-
     private static readonly validTreeItemTypes: GitTreeItemType[] = [ GitTreeItemType.Blob, GitTreeItemType.Subtree ];
-
-    // TOOD private static readonly commitDetailsPattern = /^([a-f0-9]{40})\s+(blob|tree|commit|tag)\s+(\d+)$/gm;
 
     public static parseListObjects(input: string): GitObject[] {
         if (!input || !input.trim().length) {
@@ -20,7 +13,7 @@ export class GitUtils {
 
         const buffer: GitObject[] = [];
 
-        for (const match of input.trim().matchAll(GitUtils.listObjectsPattern)) {
+        for (const match of input.trim().matchAll(/^([a-f0-9]{40})\s+(blob|tree|commit|tag)\s+(\d+)$/gmi)) {
 
             if (GitUtils.validObjectTypes.indexOf(match[2] as GitObjectType) === -1) {
                 continue;
@@ -43,7 +36,7 @@ export class GitUtils {
 
         const buffer: GitTreeItem[] = [];
 
-        for (const match of input.trim().matchAll(GitUtils.listTreeItemsPattern)) {
+        for (const match of input.trim().matchAll(/^(\d+)\s+(blob|tree)\s+([a-f0-9]{40})\s+(.*)$/gm)) {
 
             if (GitUtils.validTreeItemTypes.indexOf(match[2] as GitTreeItemType) === -1) {
                 continue;
@@ -60,10 +53,25 @@ export class GitUtils {
         return buffer;
     }
 
-    public static parseCommitDetails(input: string): GitCommit {
+    public static parseCommitDetails(commitId: string, input: string): GitCommit {
+
         if (!input || !input.trim().length) {
             return null;
         }
-        return null;
+
+        const result = /^tree\s(?<treeId>[a-f0-9]+)\n(parent (?<parentId>[a-f0-9]+)\n)*author\s(?<author>.+?)\ncommitter\s(?<committer>.+?)\n+(?<message>.*)$/gmis.exec(input.trim());
+
+        if (!result) {
+            throw new Error(`Unparseable commit ${commitId}: ${input}`);
+        }
+
+        return {
+            id: commitId,
+            parentIds: (result.groups['parentId'] && [ result.groups['parentId'] ] || []),
+            treeId: result.groups['treeId'],
+            author: result.groups['author'],
+            committer: result.groups['committer'],
+            message: result.groups['message']
+        }
     }
 }

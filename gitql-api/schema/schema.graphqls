@@ -1,6 +1,18 @@
+scalar GraphQLTimestamp
+
 enum TreeItemType {
     BLOB
     SUBTREE
+}
+
+enum TagItemType {
+    COMMIT
+}
+
+enum RefType {
+    BRANCH
+    REMOTE_TRACKING_BRANCH
+    TAG
 }
 
 type Query {
@@ -9,15 +21,14 @@ type Query {
 
 type Repository {
     path: String!
-
     blobs: [Blob!]!
     blob(id: String!): Blob
-
     trees: [Tree!]!
     tree(id: String!): Tree
-
     commits: [Commit!]!
     commit(id: String!): Commit
+    refs: [Ref!]!
+    ref(name: String!): Ref
 }
 
 type Blob {
@@ -52,11 +63,44 @@ type Commit {
     id: String!
     repository: Repository!
     parents: [Commit!]!
+    tree: Tree!
     author: String!
     committer: String!
-    tree: Tree!
+    message: String!
+    ancestors: [Commit!]!
+}
+
+type Tag {
+    name: String!
+    repository: Repository!
+    type: TagItemType!
+    tagger: Author!
+    message: String!
+    "Returns the corresponding commit for this tag (Only valid for type COMMIT)"
+    commit: Commit
+}
+
+type Ref {
+    name: String!
+    repository: Repository!
+    type: RefType!
+    "Returns the target commit this ref (Only valid for types BRANCH and REMOTE_TRACKING_BRANCH)"
+    commit: Commit
+    "Returns the branch name for this ref (Only valid for types BRANCH and REMOTE_TRACKING_BRANCH)"
+    branchName: String
+    "Returns the remote name for this ref (Only valid for type REMOTE_TRACKING_BRANCH)"
+    remoteName: String
+    "Returns the target tag this ref (Only valid for type TAG)"
+    tag: Tag
+}
+
+type Author {
+    name: String!
+    emailAddress: String!
+    timestamp: GraphQLTimestamp
 }
 
 schema {
     query: Query
 }
+
