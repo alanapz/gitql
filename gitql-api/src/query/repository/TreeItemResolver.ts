@@ -29,18 +29,18 @@ export class TreeItemResolver {
     }
 
     @ResolveField("mode")
-    getTreeItemMode(@Parent() treeItem: TreeItemImpl): Promise<string> {
+    getTreeItemMode(@Parent() treeItem: TreeItemImpl): Promise<number> {
         return Promise.resolve(treeItem.mode);
     }
 
     @ResolveField("blob")
     getTreeItemValueAsBlob(@Parent() treeItem: TreeItemImpl): Promise<BlobImpl> {
-        return (treeItem.type === GitTreeItemType.Blob ? Promise.resolve(new BlobImpl(treeItem.tree.repository, treeItem.id)) : null);
+        return (treeItem.type === GitTreeItemType.Blob ? Promise.resolve(treeItem.tree.repository.buildBlob(treeItem.id)) : null);
     }
 
     @ResolveField("subtree")
     getTreeItemValueAsSubtree(@Parent() treeItem: TreeItemImpl): Promise<TreeImpl> {
-        return (treeItem.type === GitTreeItemType.Subtree ? Promise.resolve(new TreeImpl(treeItem.tree.repository, treeItem.id)) : null);
+        return (treeItem.type === GitTreeItemType.Subtree ? Promise.resolve(treeItem.tree.repository.buildTree(treeItem.id)) : null);
     }
 
     private static readonly treeItemTypeMappings: Record<GitTreeItemType, TreeItemType> = {

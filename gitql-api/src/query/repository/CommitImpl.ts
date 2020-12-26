@@ -1,40 +1,56 @@
-import { GitCommit } from "src/git/entities";
+import { Check } from "src/check";
+import { GitCommit, isGitCommitObject } from "src/git/entities";
 import { RepositoryImpl } from "src/query/repository/RepositoryImpl";
 import { TreeImpl } from "src/query/repository/TreeImpl";
 import { LazyValue } from "src/utils/LazyValue";
 
-const check = require.main.require("./check");
+const check: Check = require.main.require("./check");
 
 export class CommitImpl {
 
+    private readonly size: LazyValue<number> = new LazyValue<number>();
     private readonly details: LazyValue<GitCommit> = new LazyValue<GitCommit>();
 
-    public constructor(public readonly repository: RepositoryImpl, public readonly id: string) {
-        check.nonNull(repository, 'repository');
-        check.nonNullNotEmpty(id, 'id');
+    constructor(public readonly repository: RepositoryImpl, public readonly id: string) {
+        check.nonNull(repository, "repository");
+        check.stringNonNullNotEmpty(id, "id");
     }
 
-    fetchParents(resolver: ((self: CommitImpl) => Promise<GitCommit>)): Promise<CommitImpl[]> {
-        return this.fetchDetails(resolver).then(details => details.parentIds.map(parentId => new CommitImpl(this.repository, parentId)));
+    fetchSize(): Promise<number> {
+        return this.size.fetch(() => this.fetchDetails().then(details => details.size));
     }
 
-    fetchTree(resolver: ((self: CommitImpl) => Promise<GitCommit>)): Promise<TreeImpl> {
-        return this.fetchDetails(resolver).then(details => new TreeImpl(this.repository, details.treeId));
+    setSize(size: number): CommitImpl {
+        this.size.set(size);
+        return this;
     }
 
-    fetchAuthor(resolver: ((self: CommitImpl) => Promise<GitCommit>)): Promise<string> {
-        return this.fetchDetails(resolver).then(details => details.author);
+    fetchParents(): Promise<CommitImpl[]> {
+        return this.fetchDetails().then(details => details.parentIds.map(parentId => this.repository.buildCommit(parentId)));
     }
 
-    fetchCommitter(resolver: ((self: CommitImpl) => Promise<GitCommit>)): Promise<string> {
-        return this.fetchDetails(resolver).then(details => details.committer);
+    fetchTree(): Promise<TreeImpl> {
+        return this.fetchDetails().then(details => this.repository.buildTree(details.treeId));
     }
 
-    fetchMessage(resolver: ((self: CommitImpl) => Promise<GitCommit>)): Promise<string> {
-        return this.fetchDetails(resolver).then(details => details.message);
+    fetchAuthor(): Promise<string> {
+        return this.fetchDetails().then(details => details.author);
     }
 
-    private fetchDetails(resolver: ((self: CommitImpl) => Promise<GitCommit>)): Promise<GitCommit> {
-        return this.details.fetch(() => resolver(this));
+    fetchCommitter(): Promise<string> {
+        return this.fetchDetails().then(details => details.committer);
+    }
+
+    fetchMessage(): Promise<string> {
+        return this.fetchDetails().then(details => details.message);
+    }
+
+    private fetchDetails(): Promise<GitCommit> {
+        return this.details.fetch(() => this.repository.getCatFileProcess().lookup(this.id).then(object => {
+            if (!isGitCommitObject(object)) {
+                throw new Error(`Unexpected object type for commit: ${this.id}`);
+            }
+            return object;
+        }));
     }
 }

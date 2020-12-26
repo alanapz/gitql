@@ -1,28 +1,45 @@
+import { Check } from "src/check";
+import { GitBlob, isGitBlobObject } from "src/git/entities";
 import { RepositoryImpl } from "src/query/repository/RepositoryImpl";
 import { LazyValue } from "src/utils/LazyValue";
 
-const check = require.main.require("./check");
+const check: Check = require.main.require("./check");
 
 export class BlobImpl {
 
     private readonly size: LazyValue<number> = new LazyValue<number>();
     private readonly value: LazyValue<string> = new LazyValue<string>();
+    private readonly details: LazyValue<GitBlob> = new LazyValue<GitBlob>();
 
-    public constructor(public readonly repository: RepositoryImpl, public readonly id: string) {
+    constructor(public readonly repository: RepositoryImpl, public readonly id: string) {
         check.nonNull(repository, 'repository');
-        check.nonNullNotEmpty(id, 'id');
+        check.stringNonNullNotEmpty(id, 'id');
     }
 
-    public fetchSize(resolver: () => Promise<number>): Promise<number> {
-        return this.size.fetch(resolver);
+    fetchSize(): Promise<number> {
+        return this.size.fetch(() => this.fetchDetails().then(details => details.size));
     }
 
-    public setSize(size: number): BlobImpl {
+    setSize(size: number): BlobImpl {
         this.size.set(size);
         return this;
     }
 
-    public fetchValue(resolver: () => Promise<string>): Promise<string> {
-        return this.value.fetch(resolver);
+    fetchValue(): Promise<string> {
+        return this.value.fetch(() => this.fetchDetails().then(details => details.value));
+    }
+
+    setValue(value: string): BlobImpl {
+        this.value.set(value);
+        return this;
+    }
+
+    private fetchDetails(): Promise<GitBlob> {
+        return this.details.fetch(() => this.repository.getCatFileProcess().lookup(this.id).then(object => {
+            if (!isGitBlobObject(object)) {
+                throw new Error(`Unexpected object type for blob: ${this.id}`);
+            }
+            return object;
+        }));
     }
 }

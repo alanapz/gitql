@@ -1,46 +1,31 @@
 import { Injectable } from '@nestjs/common';
-import { GitCommit, GitObject, GitTreeItem } from "src/git/entities";
+import { Check } from "src/check";
+import { GitObject, GitTreeItem } from "src/git/entities";
 import { GitUtils } from "src/git/git-utils";
 
-const check = require.main.require("./check");
+const check: Check = require.main.require("./check");
 
 @Injectable()
 export class GitService {
 
     public listObjects(repoPath: string): Promise<GitObject[]> {
-        check.nonNullNotEmpty(repoPath, "repoPath");
-        return this.gitExecute(['-C', repoPath, 'cat-file', '--batch-all-objects', '--batch-check']).then(result => GitUtils.parseListObjects(result));
-    }
-
-    public getObjectSize(repoPath: string, objectId: string): Promise<number> {
-        check.nonNullNotEmpty(repoPath, "repoPath");
-        check.nonNullNotEmpty(objectId, "objectId");
-        return this.gitExecute(['-C', repoPath, 'cat-file', '-s', objectId]).then(result => parseInt(result, 10));
-    }
-
-    public getObjectValue(repoPath: string, objectId: string): Promise<string> {
-        check.nonNullNotEmpty(repoPath, "repoPath");
-        check.nonNullNotEmpty(objectId, "objectId");
-        return this.gitExecute(['-C', repoPath, 'cat-file', '-p', objectId]);
+        check.stringNonNullNotEmpty(repoPath, "repoPath");
+        return this.gitExecute(['-C', repoPath, 'cat-file', '--batch-check', '--batch-all-objects']).then(result => GitUtils.parseListObjects(result));
     }
 
     public listTreeItems(repoPath: string, treeId: string): Promise<GitTreeItem[]> {
-        check.nonNullNotEmpty(repoPath, "repoPath");
-        check.nonNullNotEmpty(treeId, "treeId");
+        check.stringNonNullNotEmpty(repoPath, "repoPath");
+        check.stringNonNullNotEmpty(treeId, "treeId");
         return this.gitExecute(['-C', repoPath, 'cat-file', '-p', treeId]).then(result => GitUtils.parseTreeItems(result));
     }
 
-    public getCommitDetails(repoPath: string, commitId: string): Promise<GitCommit> {
-        check.nonNullNotEmpty(repoPath, "repoPath");
-        check.nonNullNotEmpty(commitId, "commitId");
-        return this.gitExecute(['-C', repoPath, 'cat-file', '-p', commitId]).then(result => GitUtils.parseCommitDetails(commitId, result));
-    }
-
-    private gitExecute(args: string[]): Promise<string> {
+    private gitExecute(args: string[], input?: string): Promise<string> {
 
         return new Promise((resolve, reject) => {
 
             const { spawn } = require('child_process');
+
+            console.log("git", ... args);
 
             const cmd = spawn('git', args);
 
@@ -63,6 +48,12 @@ export class GitService {
 
                 resolve(output.trim());
             });
+
+            if (input) {
+                cmd.stdin.setEncoding('utf-8');
+                cmd.stdin.write(input);
+                cmd.stdin.end();
+            }
         });
     }
 }

@@ -26,7 +26,7 @@ Query resolver: https://github.com/alanapz/gitql/blob/develop/gitql-api/src/quer
 ## How To Run
 
 ```
-docker run -it -p3000:3000 node:latest sh -c "git clone https://github.com/alanapz/gitql.git /gitql && /gitql/ci/start.sh"
+docker run -it -p3000:3000 node:15.8.0 sh -c "git clone https://github.com/alanapz/gitql.git /gitql && /gitql/ci/start.sh"
 ```
 
 The GraphQL playground should be available at: http://localhost:3000/graphql

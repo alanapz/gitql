@@ -1,4 +1,5 @@
-import { GitCommit, GitObject, GitObjectType, GitTreeItem, GitTreeItemType } from "src/git/entities";
+import { GitObject, GitObjectDetails, GitObjectType, GitTreeItem, GitTreeItemType } from "src/git/entities";
+import { GitObjectParserProcessor } from "src/git/git-object-parser";
 
 export class GitUtils {
 
@@ -29,6 +30,34 @@ export class GitUtils {
         return buffer;
     }
 
+    /**
+     *  Parses git cat-object syntax, where multiple objects are concatenated together
+     */
+    public static parseObjectDetailsList(rawInput: string): GitObjectDetails[] {
+
+        if (!rawInput || !rawInput.length) {
+            return [];
+        }
+
+        const input: string[]  = rawInput.trim().split("\n")
+
+        if (!input.length) {
+            return [];
+        }
+
+        const results: GitObjectDetails[] = [];
+
+        const processor = new GitObjectParserProcessor(results);
+
+        while (input.length) {
+            processor.nextLine(input.shift());
+        }
+
+        processor.complete();
+
+        return results;
+    }
+
     public static parseTreeItems(input: string): GitTreeItem[] {
         if (!input || !input.trim().length) {
             return [];
@@ -43,7 +72,7 @@ export class GitUtils {
             }
 
             buffer.push({
-                mode: match[1],
+                mode: parseInt(match[1], 10),
                 type: (match[2] as GitTreeItemType),
                 id: match[3],
                 name: match[4]
@@ -51,27 +80,5 @@ export class GitUtils {
         }
 
         return buffer;
-    }
-
-    public static parseCommitDetails(commitId: string, input: string): GitCommit {
-
-        if (!input || !input.trim().length) {
-            return null;
-        }
-
-        const result = /^tree\s(?<treeId>[a-f0-9]+)\n(parent (?<parentId>[a-f0-9]+)\n)*author\s(?<author>.+?)\ncommitter\s(?<committer>.+?)\n+(?<message>.*)$/gmis.exec(input.trim());
-
-        if (!result) {
-            throw new Error(`Unparseable commit ${commitId}: ${input}`);
-        }
-
-        return {
-            id: commitId,
-            parentIds: (result.groups['parentId'] && [ result.groups['parentId'] ] || []),
-            treeId: result.groups['treeId'],
-            author: result.groups['author'],
-            committer: result.groups['committer'],
-            message: result.groups['message']
-        }
     }
 }

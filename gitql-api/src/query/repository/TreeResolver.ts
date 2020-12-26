@@ -1,11 +1,13 @@
 import { Args, Parent, ResolveField, Resolver } from "@nestjs/graphql";
+import { Check } from "src/check";
 import { GitTreeItem, GitTreeItemType } from "src/git/entities";
 import { GitService } from "src/git/git.service";
 import { RepositoryImpl } from "src/query/repository/RepositoryImpl";
+import { TreeDescendantImpl } from "src/query/repository/TreeDescendantImpl";
 import { TreeImpl } from "src/query/repository/TreeImpl";
 import { TreeItemImpl } from "src/query/repository/TreeItemImpl";
 
-const check = require.main.require("./check");
+const check: Check = require.main.require("./check");
 
 @Resolver("Tree")
 export class TreeResolver {
@@ -31,7 +33,7 @@ export class TreeResolver {
 
     @ResolveField("item")
     getTreeItem(@Parent() tree: TreeImpl, @Args("name") itemName: string): Promise<TreeItemImpl> {
-        check.nonNullNotEmpty(itemName, 'itemName');
+        check.stringNonNullNotEmpty(itemName, 'itemName');
         // Split name by "/"
         return this.walkTreeItem(tree, itemName.split("/"));
     }
@@ -54,6 +56,34 @@ export class TreeResolver {
             return Promise.reject(`Not a subtree: ${itemName} in tree: ${tree.id}`);
         }
 
-        return this.walkTreeItem(new TreeImpl(found.tree.repository, found.id), remaining);
+        return this.walkTreeItem(found.tree.repository.buildTree(found.id), remaining);
+    }
+
+    @ResolveField("descendants")
+    getAllDescendants(@Parent() tree: TreeImpl): Promise<TreeDescendantImpl[]> {
+        return this.walkAllTreeDescendants(tree, []);
+    }
+
+    private async walkAllTreeDescendants(parent: TreeImpl, path: string[]): Promise<TreeDescendantImpl[]> {
+
+        const results: TreeDescendantImpl[] = [];
+
+        for (const item of await this.getTreeItems(parent)) {
+
+            const itemPath = [... path, item.name ];
+
+            results.push({
+                path: itemPath.join("/"),
+                item: item
+            })
+
+            if (item.type === GitTreeItemType.Subtree) {
+                results.push(... await this.walkAllTreeDescendants(
+                    item.tree.repository.buildTree(item.id),
+                    itemPath) );
+            }
+        }
+
+        return results;
     }
 }
